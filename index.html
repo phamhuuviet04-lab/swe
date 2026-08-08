@@ -2050,9 +2050,11 @@ What is the primary goal of digital transformation in businesses?
         
         <div id="options-container" class="space-y-3 mb-8"></div>
 
-        <button id="submit-btn" class="w-full bg-gray-900 text-white py-4 rounded-lg font-bold text-lg hover:bg-gray-800 transition shadow-lg">
-            Kiểm tra đáp án
-        </button>
+        <div class="flex gap-4">
+            <button id="skip-btn" class="w-full bg-gray-200 text-gray-800 py-4 rounded-lg font-bold text-lg hover:bg-gray-300 transition shadow-lg">
+                Đổi câu
+            </button>
+        </div>
 
         <div id="feedback" class="mt-6 p-5 rounded-lg hidden">
             <h3 id="feedback-title" class="font-bold text-lg mb-2"></h3>
@@ -2074,7 +2076,7 @@ What is the primary goal of digital transformation in businesses?
             qTypeBadge: document.getElementById('question-type-badge'),
             question: document.getElementById('question-text'),
             options: document.getElementById('options-container'),
-            submitBtn: document.getElementById('submit-btn'),
+            skipBtn: document.getElementById('skip-btn'),
             feedback: document.getElementById('feedback'),
             feedbackTitle: document.getElementById('feedback-title'),
             feedbackText: document.getElementById('feedback-text'),
@@ -2174,7 +2176,7 @@ What is the primary goal of digital transformation in businesses?
             if (reviewQueue.length === 0) {
                 ui.question.innerHTML = "🎉 Tuyệt vời! Bạn đã hoàn thành toàn bộ bài ôn tập.";
                 ui.options.innerHTML = "";
-                ui.submitBtn.style.display = "none";
+                ui.skipBtn.style.display = "none";
                 ui.progress.style.display = "none";
                 ui.qTypeBadge.style.display = "none";
                 return;
@@ -2186,7 +2188,7 @@ What is the primary goal of digital transformation in businesses?
             
             if(currentQuestion.type === 'checkbox') {
                 ui.qTypeBadge.classList.remove('hidden');
-                ui.qTypeBadge.innerText = 'CHỌN NHIỀU ĐÁP ÁN';
+                ui.qTypeBadge.innerText = `CHỌN ${currentQuestion.correct.length} ĐÁP ÁN`;
             } else {
                 ui.qTypeBadge.classList.add('hidden');
             }
@@ -2205,23 +2207,33 @@ What is the primary goal of digital transformation in businesses?
                 ui.options.appendChild(label);
             });
 
+            // Gắn sự kiện tự động kiểm tra đáp án
+            document.querySelectorAll('input[name="answer"]').forEach(input => {
+                input.addEventListener('change', () => {
+                    const selectedCount = document.querySelectorAll('input[name="answer"]:checked').length;
+                    if (currentQuestion.type === 'radio') {
+                        checkAnswer();
+                    } else if (currentQuestion.type === 'checkbox') {
+                        if (selectedCount === currentQuestion.correct.length) {
+                            checkAnswer();
+                        }
+                    }
+                });
+            });
+
             ui.feedback.classList.add('hidden');
             ui.nextBtn.classList.add('hidden');
-            ui.submitBtn.classList.remove('hidden');
+            ui.skipBtn.classList.remove('hidden');
         }
 
-        ui.submitBtn.onclick = () => {
+        function checkAnswer() {
             const selectedNodes = document.querySelectorAll('input[name="answer"]:checked');
             const selected = Array.from(selectedNodes).map(el => el.value);
             
-            if (selected.length === 0) {
-                alert("Vui lòng chọn ít nhất 1 đáp án trước khi kiểm tra!"); return;
-            }
-
             const isCorrect = selected.length === currentQuestion.correct.length && 
                               selected.every(val => currentQuestion.correct.includes(val));
 
-            ui.submitBtn.classList.add('hidden');
+            ui.skipBtn.classList.add('hidden');
             ui.feedback.classList.remove('hidden');
             ui.nextBtn.classList.remove('hidden');
 
@@ -2249,6 +2261,59 @@ What is the primary goal of digital transformation in businesses?
         ui.nextBtn.onclick = () => {
             loadNextQuestion();
         };
+
+        ui.skipBtn.onclick = () => {
+            const skippedItem = reviewQueue.shift();
+            reviewQueue.push(skippedItem); // Đưa câu hiện tại xuống cuối
+            loadNextQuestion();
+        };
+
+        // Hàm xử lý chuyển câu chung cho cả vuốt và phím
+        function handleNextAction() {
+            if (!ui.feedback.classList.contains('hidden')) {
+                // Đang hiện kết quả -> Tiếp tục
+                ui.nextBtn.click();
+            } else if (!ui.skipBtn.classList.contains('hidden')) {
+                // Đang làm câu hỏi -> Đổi câu (Bỏ qua)
+                ui.skipBtn.click();
+            }
+        }
+
+        // 1. Dùng phím mũi tên trái/phải trên máy tính
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                handleNextAction();
+            }
+        });
+
+        // 2. Vuốt sang trái/phải trên điện thoại
+        let touchstartX = 0;
+        let touchstartY = 0;
+        let touchendX = 0;
+        let touchendY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+            touchstartY = e.changedTouches[0].screenY;
+        }, {passive: true});
+
+        document.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            touchendY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            const SWIPE_THRESHOLD_X = 40;
+            
+            const diffX = Math.abs(touchendX - touchstartX);
+            const diffY = Math.abs(touchendY - touchstartY);
+
+            // Chỉ kích hoạt nếu vuốt ngang rõ rệt hơn vuốt dọc và đủ khoảng cách
+            if (diffX > diffY && diffX > SWIPE_THRESHOLD_X) {
+                handleNextAction();
+            }
+        }
     </script>
 </body>
 </html>
