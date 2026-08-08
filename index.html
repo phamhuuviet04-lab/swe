@@ -6,7 +6,13 @@
     <title>SWE Smart Quiz - Auto Load</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
+<body class="bg-slate-100 min-h-screen flex flex-col items-center p-4 font-sans">
+
+    <!-- Navigation -->
+    <div class="w-full max-w-4xl flex justify-center gap-4 mb-6 mt-4">
+        <button id="nav-quiz" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md transition">Chức năng học</button>
+        <button id="nav-list" class="px-6 py-2 bg-white text-blue-600 rounded-lg font-bold shadow-md hover:bg-blue-50 transition">Tất cả câu hỏi</button>
+    </div>
 
     <!-- ========================================== -->
     <!-- KHO DỮ LIỆU: DÁN 254 CÂU VÀO GIỮA 2 DÒNG BÊN DƯỚI -->
@@ -2037,41 +2043,65 @@ What is the primary goal of digital transformation in businesses?
     </div>
 
     <!-- MÀN HÌNH LÀM QUIZ -->
-    <div id="quiz-screen" class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-3xl hidden transition-all duration-300">
+    <div id="quiz-screen" class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-5xl hidden transition-all duration-300">
         <div class="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
             <div class="text-sm text-white bg-blue-600 px-4 py-1.5 rounded-full font-bold shadow-sm tracking-wide" id="progress"></div>
             <div class="text-xs text-gray-400 font-medium">SWE & AI Prep Tool</div>
         </div>
         
-        <!-- Badge phân loại câu hỏi -->
-        <div id="question-type-badge" class="mb-3 text-xs font-bold px-2 py-1 bg-yellow-100 text-yellow-800 rounded inline-block hidden">MULTI-SELECT</div>
-        
-        <h2 class="text-xl md:text-2xl font-bold mb-6 text-gray-800 leading-relaxed" id="question-text"></h2>
-        
-        <div id="options-container" class="space-y-3 mb-8"></div>
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Cột trái: Câu hỏi và Phản hồi -->
+            <div class="flex-1 md:w-1/2">
+                <!-- Badge phân loại câu hỏi -->
+                <div id="question-type-badge" class="mb-3 text-xs font-bold px-2 py-1 bg-yellow-100 text-yellow-800 rounded inline-block hidden">MULTI-SELECT</div>
+                
+                <h2 class="text-xl md:text-2xl font-bold text-gray-800 leading-relaxed whitespace-pre-wrap" id="question-text"></h2>
+                
+                <div id="feedback" class="mt-6 p-5 rounded-lg hidden">
+                    <h3 id="feedback-title" class="font-bold text-lg mb-2"></h3>
+                    <p id="feedback-text" class="text-base font-semibold opacity-90"></p>
+                    <button id="next-btn" class="mt-5 w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition">
+                        Tiếp tục ➔
+                    </button>
+                </div>
+            </div>
 
-        <div class="flex gap-4">
-            <button id="skip-btn" class="w-full bg-gray-200 text-gray-800 py-4 rounded-lg font-bold text-lg hover:bg-gray-300 transition shadow-lg">
-                Đổi câu
-            </button>
-        </div>
+            <!-- Cột phải: Các đáp án -->
+            <div class="flex-1 md:w-1/2 flex flex-col justify-between">
+                <div id="options-container" class="space-y-3 mb-6"></div>
 
-        <div id="feedback" class="mt-6 p-5 rounded-lg hidden">
-            <h3 id="feedback-title" class="font-bold text-lg mb-2"></h3>
-            <p id="feedback-text" class="text-base font-semibold opacity-90"></p>
-            <button id="next-btn" class="mt-5 w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-md hover:bg-blue-700 transition">
-                Tiếp tục ➔
-            </button>
+                <div class="flex gap-4">
+                    <button id="skip-btn" class="w-full bg-gray-200 text-gray-800 py-4 rounded-lg font-bold text-lg hover:bg-gray-300 transition shadow-lg mt-auto">
+                        Đổi câu
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- MÀN HÌNH DANH SÁCH -->
+    <div id="list-screen" class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-4xl hidden transition-all duration-300">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Danh sách câu hỏi</h2>
+        <div class="mb-4 text-sm text-gray-600">
+            Tổng số: <span id="total-questions" class="font-bold">0</span> câu. Bạn đã đánh dấu <span id="selected-count" class="font-bold text-blue-600">0</span> câu đã học.
+        </div>
+        <div id="questions-list-container" class="space-y-6"></div>
+    </div>
+
     <script>
+        let allQuestions = [];
+        let markedQuestions = JSON.parse(localStorage.getItem('markedQuestions') || '[]');
         let reviewQueue = [];
         let currentQuestion = null;
 
         const ui = {
             loadingScreen: document.getElementById('loading-screen'),
             quizScreen: document.getElementById('quiz-screen'),
+            listScreen: document.getElementById('list-screen'),
+            totalQuestions: document.getElementById('total-questions'),
+            selectedCount: document.getElementById('selected-count'),
+            navList: document.getElementById('nav-list'),
+            navQuiz: document.getElementById('nav-quiz'),
             progress: document.getElementById('progress'),
             qTypeBadge: document.getElementById('question-type-badge'),
             question: document.getElementById('question-text'),
@@ -2145,6 +2175,7 @@ What is the primary goal of digital transformation in businesses?
 
                 if (options.length > 1 && uniqueCorrect.length > 0) {
                     questions.push({
+                        id: questions.length,
                         question: questionText,
                         type: uniqueCorrect.length > 1 ? 'checkbox' : 'radio',
                         options: options,
@@ -2156,20 +2187,122 @@ What is the primary goal of digital transformation in businesses?
             return questions;
         }
 
+        let focusedListIndex = 0;
+
+        function updateFocus() {
+            const listItems = document.querySelectorAll('#questions-list-container > div');
+            listItems.forEach((item, idx) => {
+                if (idx === focusedListIndex) {
+                    item.classList.add('ring-4', 'ring-blue-400', 'border-blue-400', 'bg-blue-50');
+                    item.classList.remove('border', 'bg-gray-50');
+                } else {
+                    item.classList.remove('ring-4', 'ring-blue-400', 'border-blue-400', 'bg-blue-50');
+                    item.classList.add('border', 'bg-gray-50');
+                }
+            });
+        }
+
+        function renderListScreen() {
+            ui.totalQuestions.innerText = allQuestions.length;
+            ui.selectedCount.innerText = markedQuestions.length;
+            const container = document.getElementById('questions-list-container');
+            container.innerHTML = '';
+            
+            allQuestions.forEach(q => {
+                const qDiv = document.createElement('div');
+                qDiv.className = "p-4 border rounded-lg bg-gray-50 shadow-sm transition-all";
+                
+                const isMarked = markedQuestions.includes(q.id);
+                
+                const header = document.createElement('div');
+                header.className = "flex justify-between items-start gap-4 mb-3";
+                header.innerHTML = `
+                    <h3 class="font-bold text-gray-800 flex-1 whitespace-pre-wrap">${q.question}</h3>
+                    <label class="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 border rounded shadow-sm hover:bg-blue-50 transition">
+                        <input type="checkbox" class="mark-checkbox w-4 h-4 accent-blue-600" data-id="${q.id}" ${isMarked ? 'checked' : ''}>
+                        <span class="text-sm font-bold text-gray-700">Đã học</span>
+                    </label>
+                `;
+                
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = "space-y-2";
+                q.options.forEach(opt => {
+                    const isCorrect = q.correct.includes(opt);
+                    const optDiv = document.createElement('div');
+                    optDiv.className = `p-3 rounded-lg ${isCorrect ? 'bg-green-100 font-bold border border-green-400 text-green-800' : 'bg-white border border-gray-200 text-gray-600'}`;
+                    optDiv.innerHTML = `${isCorrect ? '✅ ' : '⬜ '}${opt}`;
+                    optionsDiv.appendChild(optDiv);
+                });
+                
+                qDiv.appendChild(header);
+                qDiv.appendChild(optionsDiv);
+                container.appendChild(qDiv);
+            });
+            
+            document.querySelectorAll('.mark-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    const id = parseInt(e.target.getAttribute('data-id'));
+                    if (e.target.checked) {
+                        if (!markedQuestions.includes(id)) markedQuestions.push(id);
+                    } else {
+                        markedQuestions = markedQuestions.filter(mId => mId !== id);
+                    }
+                    localStorage.setItem('markedQuestions', JSON.stringify(markedQuestions));
+                    ui.selectedCount.innerText = markedQuestions.length;
+                });
+            });
+            focusedListIndex = 0;
+            updateFocus();
+        }
+
+        function startQuiz() {
+            let questionsToLearn = allQuestions;
+            if (markedQuestions.length > 0) {
+                questionsToLearn = allQuestions.filter(q => markedQuestions.includes(q.id));
+            }
+            
+            reviewQueue = [...questionsToLearn].sort(() => Math.random() - 0.5);
+            
+            ui.listScreen.classList.add('hidden');
+            ui.quizScreen.classList.remove('hidden');
+            
+            ui.options.innerHTML = "";
+            ui.feedback.classList.add('hidden');
+            ui.nextBtn.classList.add('hidden');
+            ui.skipBtn.style.display = "";
+            ui.skipBtn.classList.remove('hidden');
+            ui.progress.style.display = "";
+            if (ui.qTypeBadge) ui.qTypeBadge.style.display = "";
+            
+            loadNextQuestion();
+        }
+
+        ui.navQuiz.addEventListener('click', () => {
+            ui.navQuiz.className = "px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md transition";
+            ui.navList.className = "px-6 py-2 bg-white text-blue-600 rounded-lg font-bold shadow-md hover:bg-blue-50 transition";
+            startQuiz();
+        });
+
+        ui.navList.addEventListener('click', () => {
+            ui.navList.className = "px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md transition";
+            ui.navQuiz.className = "px-6 py-2 bg-white text-blue-600 rounded-lg font-bold shadow-md hover:bg-blue-50 transition";
+            ui.quizScreen.classList.add('hidden');
+            ui.listScreen.classList.remove('hidden');
+            renderListScreen();
+        });
+
         // TỰ ĐỘNG CHẠY KHI MỞ TRANG
         window.onload = () => {
             const rawData = document.getElementById('database').textContent;
-            reviewQueue = parseRawText(rawData);
+            allQuestions = parseRawText(rawData);
             
-            if (reviewQueue.length === 0) {
+            if (allQuestions.length === 0) {
                 ui.loadingScreen.innerText = "❌ Lỗi: Không tìm thấy dữ liệu câu hỏi. Hãy kiểm tra lại file code!";
                 return;
             }
             
-            reviewQueue = reviewQueue.sort(() => Math.random() - 0.5);
             ui.loadingScreen.classList.add('hidden');
-            ui.quizScreen.classList.remove('hidden');
-            loadNextQuestion();
+            startQuiz();
         };
 
         function loadNextQuestion() {
@@ -2194,7 +2327,7 @@ What is the primary goal of digital transformation in businesses?
             }
             
             ui.options.innerHTML = "";
-            currentQuestion.options.forEach(opt => {
+            currentQuestion.options.forEach((opt, index) => {
                 const label = document.createElement('label');
                 label.className = "flex items-start p-4 border-2 border-gray-100 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition";
                 const inputType = currentQuestion.type;
@@ -2202,7 +2335,10 @@ What is the primary goal of digital transformation in businesses?
 
                 label.innerHTML = `
                     <input type="${inputType}" name="answer" value="${opt.replace(/"/g, '&quot;')}" class="mt-1 mr-4 w-5 h-5 cursor-pointer accent-blue-600 ${inputClass}">
-                    <span class="text-gray-700 font-medium">${opt}</span>
+                    <span class="text-gray-700 font-medium">
+                        <span class="inline-flex items-center justify-center w-6 h-6 mr-2 text-xs font-bold text-gray-500 bg-gray-200 rounded shadow-sm">${index + 1}</span>
+                        ${opt}
+                    </span>
                 `;
                 ui.options.appendChild(label);
             });
@@ -2279,10 +2415,66 @@ What is the primary goal of digital transformation in businesses?
             }
         }
 
-        // 1. Dùng phím mũi tên trái/phải trên máy tính
+        // 1. Xử lý bàn phím chung
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                handleNextAction();
+            // MÀN HÌNH DANH SÁCH
+            if (!ui.listScreen.classList.contains('hidden')) {
+                const listItems = document.querySelectorAll('#questions-list-container > div');
+                if (listItems.length === 0) return;
+
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const cb = listItems[focusedListIndex].querySelector('.mark-checkbox');
+                    if (cb) {
+                        cb.checked = !cb.checked;
+                        cb.dispatchEvent(new Event('change'));
+                    }
+                    if (focusedListIndex < listItems.length - 1) {
+                        focusedListIndex++;
+                        updateFocus();
+                        listItems[focusedListIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (focusedListIndex < listItems.length - 1) {
+                        focusedListIndex++;
+                        updateFocus();
+                        listItems[focusedListIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (focusedListIndex > 0) {
+                        focusedListIndex--;
+                        updateFocus();
+                        listItems[focusedListIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+                return;
+            }
+
+            // MÀN HÌNH HỌC (QUIZ)
+            if (!ui.quizScreen.classList.contains('hidden')) {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    handleNextAction();
+                }
+
+                // Chọn đáp án bằng phím số (1, 2, 3...)
+                if (e.key >= '1' && e.key <= '9') {
+                    if (ui.feedback.classList.contains('hidden')) {
+                        const index = parseInt(e.key) - 1;
+                        const inputs = document.querySelectorAll('input[name="answer"]');
+                        if (index >= 0 && index < inputs.length) {
+                            const input = inputs[index];
+                            if (input.type === 'radio') {
+                                input.checked = true;
+                                input.dispatchEvent(new Event('change'));
+                            } else if (input.type === 'checkbox') {
+                                input.checked = !input.checked;
+                                input.dispatchEvent(new Event('change'));
+                            }
+                        }
+                    }
+                }
             }
         });
 
