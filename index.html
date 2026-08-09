@@ -2111,6 +2111,8 @@ What is the primary goal of digital transformation in businesses?
         let markedQuestions = JSON.parse(localStorage.getItem('markedQuestions') || '[]');
         let reviewQueue = [];
         let currentQuestion = null;
+        const savedLastMarkedId = localStorage.getItem('lastMarkedQuestionId');
+        let lastMarkedQuestionId = savedLastMarkedId !== null ? Number(savedLastMarkedId) : null;
 
         const ui = {
             loadingScreen: document.getElementById('loading-screen'),
@@ -2234,6 +2236,32 @@ What is the primary goal of digital transformation in businesses?
 
         let focusedListIndex = 0;
 
+        function updateLastMarkedQuestion(id) {
+            if (id === null || id === undefined || Number.isNaN(Number(id))) return;
+            lastMarkedQuestionId = Number(id);
+            localStorage.setItem('lastMarkedQuestionId', String(lastMarkedQuestionId));
+        }
+
+        function getTargetLastQuestionId() {
+            if (markedQuestions.length > 0) {
+                let latestIndex = -1;
+                let latestId = null;
+                allQuestions.forEach((q, idx) => {
+                    if (markedQuestions.includes(q.id) && idx > latestIndex) {
+                        latestIndex = idx;
+                        latestId = q.id;
+                    }
+                });
+                if (latestId !== null) return latestId;
+            }
+
+            if (lastMarkedQuestionId !== null && allQuestions.some(q => q.id === lastMarkedQuestionId)) {
+                return lastMarkedQuestionId;
+            }
+
+            return null;
+        }
+
         function updateFocus() {
             const listItems = document.querySelectorAll('#questions-list-container > div');
             listItems.forEach((item, idx) => {
@@ -2290,6 +2318,7 @@ What is the primary goal of digital transformation in businesses?
                     const id = parseInt(e.target.getAttribute('data-id'));
                     if (e.target.checked) {
                         if (!markedQuestions.includes(id)) markedQuestions.push(id);
+                        updateLastMarkedQuestion(id);
                     } else {
                         markedQuestions = markedQuestions.filter(mId => mId !== id);
                     }
@@ -2328,24 +2357,15 @@ What is the primary goal of digital transformation in businesses?
         });
 
         function scrollToLastLearned() {
-            if (markedQuestions.length === 0) {
+            const targetId = getTargetLastQuestionId();
+            if (targetId === null) {
                 alert('Bạn chưa đánh dấu câu nào là đã học!');
                 return;
             }
-            // Tìm câu đã học có index lớn nhất trong allQuestions
-            let lastIndex = -1;
-            let lastQid = null;
-            allQuestions.forEach((q, idx) => {
-                if (markedQuestions.includes(q.id)) {
-                    lastIndex = idx;
-                    lastQid = q.id;
-                }
-            });
-            if (lastQid === null) return;
-            const target = document.querySelector(`[data-qid="${lastQid}"]`);
+
+            const target = document.querySelector(`[data-qid="${targetId}"]`);
             if (!target) return;
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Flash highlight
             target.classList.add('ring-4', 'ring-amber-400', 'border-amber-400');
             setTimeout(() => {
                 target.classList.remove('ring-4', 'ring-amber-400', 'border-amber-400');
@@ -2355,11 +2375,10 @@ What is the primary goal of digital transformation in businesses?
         document.getElementById('toggle-all-btn').addEventListener('click', () => {
             const allSelected = allQuestions.length > 0 && markedQuestions.length === allQuestions.length;
             if (allSelected) {
-                // Bỏ chọn tất cả
                 markedQuestions = [];
             } else {
-                // Chọn tất cả
                 markedQuestions = allQuestions.map(q => q.id);
+                updateLastMarkedQuestion(allQuestions[allQuestions.length - 1]?.id ?? null);
             }
             localStorage.setItem('markedQuestions', JSON.stringify(markedQuestions));
             renderListScreen();
