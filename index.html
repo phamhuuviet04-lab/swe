@@ -2300,6 +2300,26 @@ What is the primary goal of digital transformation in businesses?
             });
         }
 
+        function activateListItem(index, moveToNext = true) {
+            const listItems = document.querySelectorAll('#questions-list-container > div');
+            if (!listItems[index]) return;
+
+            focusedListIndex = index;
+            updateFocus();
+
+            const cb = listItems[index].querySelector('.mark-checkbox');
+            if (cb) {
+                cb.checked = !cb.checked;
+                cb.dispatchEvent(new Event('change'));
+            }
+
+            if (moveToNext && index < listItems.length - 1) {
+                focusedListIndex = index + 1;
+                updateFocus();
+                listItems[focusedListIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
         function renderListScreen() {
             ui.totalQuestions.innerText = allQuestions.length;
             ui.selectedCount.innerText = markedQuestions.length;
@@ -2340,6 +2360,17 @@ What is the primary goal of digital transformation in businesses?
                 
                 qDiv.appendChild(header);
                 qDiv.appendChild(optionsDiv);
+                qDiv.addEventListener('click', (event) => {
+                    if (event.target.closest('.mark-checkbox')) return;
+                    const itemIndex = Array.from(container.children).indexOf(qDiv);
+                    focusedListIndex = itemIndex;
+                    updateFocus();
+                    const cb = qDiv.querySelector('.mark-checkbox');
+                    if (cb) {
+                        cb.checked = !cb.checked;
+                        cb.dispatchEvent(new Event('change'));
+                    }
+                });
                 container.appendChild(qDiv);
             });
             
@@ -2597,16 +2628,7 @@ What is the primary goal of digital transformation in businesses?
 
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    const cb = listItems[focusedListIndex].querySelector('.mark-checkbox');
-                    if (cb) {
-                        cb.checked = !cb.checked;
-                        cb.dispatchEvent(new Event('change'));
-                    }
-                    if (focusedListIndex < listItems.length - 1) {
-                        focusedListIndex++;
-                        updateFocus();
-                        listItems[focusedListIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    activateListItem(focusedListIndex, true);
                 } else if (e.key === 'ArrowDown') {
                     e.preventDefault();
                     if (focusedListIndex < listItems.length - 1) {
