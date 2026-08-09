@@ -2098,6 +2098,12 @@ What is the primary goal of digital transformation in businesses?
             </div>
         </div>
         <div id="questions-list-container" class="space-y-6"></div>
+
+        <!-- Nút Về đầu trang -->
+        <button id="back-to-top-btn" title="Về đầu trang"
+            class="hidden fixed bottom-6 right-6 z-50 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-xl hover:bg-blue-700 active:scale-90 transition-all duration-200">
+            ↑
+        </button>
     </div>
 
     <script>
@@ -2519,6 +2525,21 @@ What is the primary goal of digital transformation in businesses?
             }
         }
 
+        // 2. Xử lý nút phụ ở hai bên chuột
+        document.addEventListener('mousedown', (e) => {
+            // 3 = back button, 4 = forward button, 5 = extra side button (một số mouse)
+            if (e.button === 3) {
+                e.preventDefault();
+                ui.skipBtn.click();
+                return;
+            }
+
+            if (e.button === 4 || e.button === 5) {
+                e.preventDefault();
+                handleNextAction();
+            }
+        });
+
         // 1. Xử lý bàn phím chung
         document.addEventListener('keydown', (e) => {
             // MÀN HÌNH DANH SÁCH
@@ -2582,34 +2603,22 @@ What is the primary goal of digital transformation in businesses?
             }
         });
 
-        // 2. Vuốt sang trái/phải trên điện thoại
-        let touchstartX = 0;
-        let touchstartY = 0;
-        let touchendX = 0;
-        let touchendY = 0;
-
-        document.addEventListener('touchstart', e => {
-            touchstartX = e.changedTouches[0].screenX;
-            touchstartY = e.changedTouches[0].screenY;
-        }, {passive: true});
-
-        document.addEventListener('touchend', e => {
-            touchendX = e.changedTouches[0].screenX;
-            touchendY = e.changedTouches[0].screenY;
-            handleSwipe();
-        }, {passive: true});
-
-        function handleSwipe() {
-            const SWIPE_THRESHOLD_X = 40;
-            
-            const diffX = Math.abs(touchendX - touchstartX);
-            const diffY = Math.abs(touchendY - touchstartY);
-
-            // Chỉ kích hoạt nếu vuốt ngang rõ rệt hơn vuốt dọc và đủ khoảng cách
-            if (diffX > diffY && diffX > SWIPE_THRESHOLD_X) {
-                handleNextAction();
+        // Nút về đầu trang
+        const backToTopBtn = document.getElementById('back-to-top-btn');
+        window.addEventListener('scroll', () => {
+            if (!ui.listScreen.classList.contains('hidden')) {
+                if (window.scrollY > 300) {
+                    backToTopBtn.classList.remove('hidden');
+                } else {
+                    backToTopBtn.classList.add('hidden');
+                }
+            } else {
+                backToTopBtn.classList.add('hidden');
             }
-        }
+        });
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
     </script>
 </body>
 </html>
