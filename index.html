@@ -2091,9 +2091,13 @@ What is the primary goal of digital transformation in businesses?
                     <span>📍</span>
                     <span>Câu đã học cuối</span>
                 </button>
-                <button id="toggle-all-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 active:scale-95 transition text-sm">
-                    <span id="toggle-all-icon">☑️</span>
-                    <span id="toggle-all-label">Chọn tất cả</span>
+                <button id="select-all-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 active:scale-95 transition text-sm">
+                    <span>☑️</span>
+                    <span>Chọn tất cả</span>
+                </button>
+                <button id="clear-all-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg font-bold shadow hover:bg-gray-600 active:scale-95 transition text-sm">
+                    <span>🗑️</span>
+                    <span>Bỏ chọn tất</span>
                 </button>
             </div>
         </div>
@@ -2242,18 +2246,39 @@ What is the primary goal of digital transformation in businesses?
             localStorage.setItem('lastMarkedQuestionId', String(lastMarkedQuestionId));
         }
 
-        function getTargetLastQuestionId() {
-            if (markedQuestions.length > 0) {
-                let latestIndex = -1;
-                let latestId = null;
-                allQuestions.forEach((q, idx) => {
-                    if (markedQuestions.includes(q.id) && idx > latestIndex) {
-                        latestIndex = idx;
-                        latestId = q.id;
-                    }
-                });
-                if (latestId !== null) return latestId;
+        function clearLastMarkedQuestion() {
+            lastMarkedQuestionId = null;
+            localStorage.removeItem('lastMarkedQuestionId');
+        }
+
+        function getMostRecentMarkedQuestionId() {
+            let latestIndex = -1;
+            let latestId = null;
+            allQuestions.forEach((q, idx) => {
+                if (markedQuestions.includes(q.id) && idx > latestIndex) {
+                    latestIndex = idx;
+                    latestId = q.id;
+                }
+            });
+            return latestId;
+        }
+
+        function syncLastMarkedQuestionFromSelection() {
+            const latestId = getMostRecentMarkedQuestionId();
+            if (latestId !== null) {
+                updateLastMarkedQuestion(latestId);
+                return;
             }
+
+            // Giữ lại lịch sử câu gần nhất đã chọn trước đó, ngay cả khi danh sách hiện tại đang rỗng.
+            if (lastMarkedQuestionId === null) {
+                clearLastMarkedQuestion();
+            }
+        }
+
+        function getTargetLastQuestionId() {
+            const latestCurrentId = getMostRecentMarkedQuestionId();
+            if (latestCurrentId !== null) return latestCurrentId;
 
             if (lastMarkedQuestionId !== null && allQuestions.some(q => q.id === lastMarkedQuestionId)) {
                 return lastMarkedQuestionId;
@@ -2321,35 +2346,26 @@ What is the primary goal of digital transformation in businesses?
                         updateLastMarkedQuestion(id);
                     } else {
                         markedQuestions = markedQuestions.filter(mId => mId !== id);
+                        syncLastMarkedQuestionFromSelection();
                     }
                     localStorage.setItem('markedQuestions', JSON.stringify(markedQuestions));
                     ui.selectedCount.innerText = markedQuestions.length;
-                    updateToggleAllBtn();
+                    updateSelectAllButtonState();
                 });
             });
 
-            updateToggleAllBtn();
+            updateSelectAllButtonState();
             focusedListIndex = 0;
             updateFocus();
         }
 
-        function updateToggleAllBtn() {
-            const btn = document.getElementById('toggle-all-btn');
-            const icon = document.getElementById('toggle-all-icon');
-            const label = document.getElementById('toggle-all-label');
+        function updateSelectAllButtonState() {
+            const btn = document.getElementById('select-all-btn');
             if (!btn) return;
             const allSelected = allQuestions.length > 0 && markedQuestions.length === allQuestions.length;
-            if (allSelected) {
-                btn.classList.replace('bg-blue-600', 'bg-gray-500');
-                btn.classList.replace('hover:bg-blue-700', 'hover:bg-gray-600');
-                icon.innerText = '☐';
-                label.innerText = 'Bỏ chọn tất cả';
-            } else {
-                btn.classList.replace('bg-gray-500', 'bg-blue-600');
-                btn.classList.replace('hover:bg-gray-600', 'hover:bg-blue-700');
-                icon.innerText = '☑️';
-                label.innerText = 'Chọn tất cả';
-            }
+            btn.disabled = allSelected;
+            btn.classList.toggle('opacity-50', allSelected);
+            btn.classList.toggle('cursor-not-allowed', allSelected);
         }
 
         document.getElementById('scroll-last-btn').addEventListener('click', () => {
@@ -2372,13 +2388,21 @@ What is the primary goal of digital transformation in businesses?
             }, 2000);
         }
 
-        document.getElementById('toggle-all-btn').addEventListener('click', () => {
-            const allSelected = allQuestions.length > 0 && markedQuestions.length === allQuestions.length;
-            if (allSelected) {
-                markedQuestions = [];
+        document.getElementById('select-all-btn').addEventListener('click', () => {
+            if (allQuestions.length === 0) return;
+            markedQuestions = allQuestions.map(q => q.id);
+            updateLastMarkedQuestion(allQuestions[allQuestions.length - 1]?.id ?? null);
+            localStorage.setItem('markedQuestions', JSON.stringify(markedQuestions));
+            renderListScreen();
+        });
+
+        document.getElementById('clear-all-btn').addEventListener('click', () => {
+            const previousLastQuestionId = getTargetLastQuestionId();
+            markedQuestions = [];
+            if (previousLastQuestionId !== null) {
+                updateLastMarkedQuestion(previousLastQuestionId);
             } else {
-                markedQuestions = allQuestions.map(q => q.id);
-                updateLastMarkedQuestion(allQuestions[allQuestions.length - 1]?.id ?? null);
+                clearLastMarkedQuestion();
             }
             localStorage.setItem('markedQuestions', JSON.stringify(markedQuestions));
             renderListScreen();
@@ -2546,7 +2570,7 @@ What is the primary goal of digital transformation in businesses?
 
         // 2. Xử lý nút phụ ở hai bên chuột
         document.addEventListener('mousedown', (e) => {
-            // 3 = back button, 4 = forward button, 5 = extra side button (một số mouse)
+            // 3 = back button, 4 = forward button, 5 = extra sid=]]e button (một số mouse)
             if (e.button === 3) {
                 e.preventDefault();
                 ui.skipBtn.click();
