@@ -2306,7 +2306,7 @@ What is the primary goal of digital transformation in businesses?
             const container = document.getElementById('questions-list-container');
             container.innerHTML = '';
             
-            allQuestions.forEach(q => {
+            allQuestions.forEach((q, index) => {
                 const qDiv = document.createElement('div');
                 qDiv.className = "p-4 border rounded-lg bg-gray-50 shadow-sm transition-all";
                 qDiv.setAttribute('data-qid', q.id);
@@ -2316,7 +2316,12 @@ What is the primary goal of digital transformation in businesses?
                 const header = document.createElement('div');
                 header.className = "flex justify-between items-start gap-4 mb-3";
                 header.innerHTML = `
-                    <h3 class="font-bold text-gray-800 flex-1 whitespace-pre-wrap">${q.question}</h3>
+                    <div class="flex items-start gap-3 flex-1">
+                        <span class="inline-flex items-center justify-center min-w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm shadow-sm">
+                            ${index + 1}
+                        </span>
+                        <h3 class="font-bold text-gray-800 flex-1 whitespace-pre-wrap">${q.question}</h3>
+                    </div>
                     <label class="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 border rounded shadow-sm hover:bg-blue-50 transition">
                         <input type="checkbox" class="mark-checkbox w-4 h-4 accent-blue-600" data-id="${q.id}" ${isMarked ? 'checked' : ''}>
                         <span class="text-sm font-bold text-gray-700">Đã học</span>
