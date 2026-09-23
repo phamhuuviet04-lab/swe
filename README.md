@@ -9,10 +9,15 @@
   - **Bài 6**: Phần 1 (一緒に行きませんか), Phần 2 (どちらがいいですか。), Phần 3 (約束)
   - **Bài 7**: Phần 1 (道がわかりません), Phần 2 (パーティーの準備), Phần 3 (みんなで楽しいパーティー)
 - **Chế độ Học (Quiz)**:
+  - **3 Chế độ hỏi đáp linh hoạt**:
+    - **🇯🇵 ➔ 🇻🇳 Nhật - Việt**: Câu hỏi tiếng Nhật, chọn nghĩa tiếng Việt.
+    - **🇻🇳 ➔ 🇯🇵 Việt - Nhật**: Câu hỏi tiếng Việt, chọn từ tiếng Nhật tương ứng.
+    - **🔀 Trộn cả hai**: Xáo trộn ngẫu nhiên cả hai chiều câu hỏi để rèn phản xạ toàn diện.
+  - **Tùy chọn ẩn Furigana**: Hỗ trợ ẩn cách đọc (chỉ hiện Hán tự) ở cả câu hỏi tiếng Nhật và các lựa chọn đáp án tiếng Nhật.
+  - **Phản hồi chi tiết**: Hiển thị rõ cặp từ Hán tự kèm Furigana và nghĩa tiếng Việt sau mỗi lượt trả lời.
   - Trắc nghiệm phản xạ nhanh.
   - Tự động lặp lại các câu trả lời sai cho tới khi nắm vững.
   - Phím tắt (1-9, Mũi tên, Enter) và hỗ trợ phím phụ chuột (mouse side buttons).
-  - Tùy chọn ẩn Furigana để tập trung nhận diện Hán tự (Kanji).
 - **Màn hình Tất cả câu hỏi (List view)**:
   - Lọc nhanh theo Bài và từng Phần.
   - Đánh dấu câu đã học, lưu trữ tiến độ qua LocalStorage.

@@ -2044,17 +2044,37 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
             </div>
             <div class="text-xs text-gray-400 font-medium" id="quiz-subtitle">jpd • Tiếng Nhật Bài 4 - 7 (できる日本語)</div>
         </div>
+
+        <!-- Toolbar Chế độ & Furigana -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-6 bg-slate-50 p-2.5 md:p-3 rounded-xl border border-slate-200">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Chế độ hỏi:</span>
+                <div class="inline-flex p-1 bg-white rounded-lg border border-gray-200 shadow-sm gap-1 flex-wrap">
+                    <button class="quiz-mode-btn px-3 py-1.5 text-xs md:text-sm font-bold rounded-md transition" data-mode="jp-vi">
+                        🇯🇵 ➔ 🇻🇳 Nhật - Việt
+                    </button>
+                    <button class="quiz-mode-btn px-3 py-1.5 text-xs md:text-sm font-bold rounded-md transition" data-mode="vi-jp">
+                        🇻🇳 ➔ 🇯🇵 Việt - Nhật
+                    </button>
+                    <button class="quiz-mode-btn px-3 py-1.5 text-xs md:text-sm font-bold rounded-md transition" data-mode="mix">
+                        🔀 Trộn cả hai
+                    </button>
+                </div>
+            </div>
+            
+            <label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-gray-600 hover:text-blue-600 select-none bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg transition border border-gray-200 shadow-sm ml-auto">
+                <input type="checkbox" id="toggle-furigana" class="w-4 h-4 accent-blue-600 rounded">
+                <span>Ẩn cách đọc (chỉ hiện Hán tự)</span>
+            </label>
+        </div>
         
         <div class="flex flex-col md:flex-row gap-8">
             <!-- Cột trái: Câu hỏi và Phản hồi -->
             <div class="flex-1 md:w-1/2">
-                <!-- Badge phân loại câu hỏi -->
-                <div class="flex items-center justify-between gap-2 mb-3">
+                <!-- Badge phân loại câu hỏi & Hướng câu hỏi -->
+                <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                    <span id="direction-badge" class="text-xs font-bold px-3 py-1 rounded-full inline-flex items-center gap-1 border"></span>
                     <div id="question-type-badge" class="text-xs font-bold px-2 py-1 bg-yellow-100 text-yellow-800 rounded inline-block hidden">MULTI-SELECT</div>
-                    <label class="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-gray-600 hover:text-blue-600 select-none bg-gray-100 hover:bg-blue-50 px-2.5 py-1 rounded-md transition border border-gray-200 ml-auto">
-                        <input type="checkbox" id="toggle-furigana" class="w-3.5 h-3.5 accent-blue-600 rounded">
-                        <span>Ẩn cách đọc (chỉ hiện Hán tự)</span>
-                    </label>
                 </div>
                 
                 <h2 class="text-xl md:text-2xl font-bold text-gray-800 leading-relaxed whitespace-pre-wrap" id="question-text"></h2>
@@ -2150,6 +2170,20 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
         const savedLastMarkedId = localStorage.getItem(STORAGE_KEY_LAST);
         let lastMarkedQuestionId = savedLastMarkedId !== null ? Number(savedLastMarkedId) : null;
 
+        const STORAGE_KEY_MODE = 'quizMode_jp_v2';
+        let currentQuizMode = localStorage.getItem(STORAGE_KEY_MODE) || 'jp-vi';
+
+        function updateQuizModeUI() {
+            document.querySelectorAll('.quiz-mode-btn').forEach(btn => {
+                const mode = btn.getAttribute('data-mode');
+                if (mode === currentQuizMode) {
+                    btn.className = "quiz-mode-btn px-3 py-1.5 text-xs md:text-sm font-bold rounded-md transition bg-blue-600 text-white shadow-sm";
+                } else {
+                    btn.className = "quiz-mode-btn px-3 py-1.5 text-xs md:text-sm font-bold rounded-md transition text-gray-600 hover:text-blue-600 hover:bg-blue-50";
+                }
+            });
+        }
+
         const ui = {
             loadingScreen: document.getElementById('loading-screen'),
             quizScreen: document.getElementById('quiz-screen'),
@@ -2160,6 +2194,7 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
             navQuiz: document.getElementById('nav-quiz'),
             progress: document.getElementById('progress'),
             qTypeBadge: document.getElementById('question-type-badge'),
+            directionBadge: document.getElementById('direction-badge'),
             question: document.getElementById('question-text'),
             options: document.getElementById('options-container'),
             skipBtn: document.getElementById('skip-btn'),
@@ -2171,10 +2206,25 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
         function updateQuestionDisplay() {
             if (!currentQuestion) return;
             const hideFurigana = document.getElementById('toggle-furigana')?.checked;
-            if (hideFurigana) {
-                ui.question.innerText = currentQuestion.question.replace(/\s*\([^)]+\)/g, '');
+
+            if (currentQuestion.direction === 'jp-vi') {
+                ui.question.innerText = hideFurigana 
+                    ? currentQuestion.prompt.replace(/\s*\([^)]+\)/g, '') 
+                    : currentQuestion.prompt;
             } else {
-                ui.question.innerText = currentQuestion.question;
+                ui.question.innerText = currentQuestion.prompt;
+            }
+
+            if (currentQuestion.direction === 'vi-jp') {
+                document.querySelectorAll('#options-container label').forEach((lbl, idx) => {
+                    const span = lbl.querySelector('.option-text');
+                    const rawOpt = currentQuestion.options[idx];
+                    if (span && rawOpt) {
+                        span.innerText = hideFurigana 
+                            ? rawOpt.replace(/\s*\([^)]+\)/g, '') 
+                            : rawOpt;
+                    }
+                });
             }
         }
         document.getElementById('toggle-furigana')?.addEventListener('change', () => {
@@ -2532,6 +2582,72 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
             renderListScreen();
         });
 
+        function getJapaneseDistractors(baseQ, candidatePool, count = 3) {
+            const isDifferent = item => 
+                item.question !== baseQ.question && 
+                item.correct[0] !== baseQ.correct[0];
+
+            let pool = candidatePool.filter(isDifferent);
+
+            if (pool.length < count) {
+                const sameLesson = allQuestions.filter(item => item.lesson === baseQ.lesson && isDifferent(item));
+                pool = [...pool, ...sameLesson];
+            }
+
+            if (pool.length < count) {
+                const any = allQuestions.filter(isDifferent);
+                pool = [...pool, ...any];
+            }
+
+            const seen = new Set();
+            const uniquePool = [];
+            for (const item of pool) {
+                if (!seen.has(item.question)) {
+                    seen.add(item.question);
+                    uniquePool.push(item);
+                }
+            }
+
+            uniquePool.sort(() => Math.random() - 0.5);
+            return uniquePool.slice(0, count).map(item => item.question);
+        }
+
+        function createQuizItem(baseQ, direction, candidatePool) {
+            if (direction === 'vi-jp') {
+                const distractors = getJapaneseDistractors(baseQ, candidatePool, 3);
+                const options = [baseQ.question, ...distractors].sort(() => Math.random() - 0.5);
+                return {
+                    id: baseQ.id,
+                    direction: 'vi-jp',
+                    prompt: baseQ.correct[0],
+                    options: options,
+                    correct: [baseQ.question],
+                    lesson: baseQ.lesson,
+                    part: baseQ.part,
+                    partTitle: baseQ.partTitle,
+                    type: 'radio',
+                    correctJapanese: baseQ.question,
+                    correctVietnamese: baseQ.correct[0],
+                    baseQ: baseQ
+                };
+            } else {
+                return {
+                    id: baseQ.id,
+                    direction: 'jp-vi',
+                    prompt: baseQ.question,
+                    options: [...baseQ.options].sort(() => Math.random() - 0.5),
+                    correct: [...baseQ.correct],
+                    lesson: baseQ.lesson,
+                    part: baseQ.part,
+                    partTitle: baseQ.partTitle,
+                    type: baseQ.type,
+                    correctJapanese: baseQ.question,
+                    correctVietnamese: baseQ.correct[0],
+                    baseQ: baseQ
+                };
+            }
+        }
+
         function startQuiz() {
             const filtered = getFilteredQuestions();
             let questionsToLearn = filtered;
@@ -2541,8 +2657,32 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
                     questionsToLearn = markedInFilter;
                 }
             }
-            
-            reviewQueue = [...questionsToLearn].sort(() => Math.random() - 0.5);
+
+            if (questionsToLearn.length === 0) {
+                ui.listScreen.classList.add('hidden');
+                ui.quizScreen.classList.remove('hidden');
+                ui.question.innerHTML = "Không có câu hỏi nào trong mục này.";
+                ui.options.innerHTML = "";
+                ui.skipBtn.style.display = "none";
+                ui.progress.style.display = "none";
+                if (ui.directionBadge) ui.directionBadge.style.display = "none";
+                if (ui.qTypeBadge) ui.qTypeBadge.style.display = "none";
+                ui.feedback.classList.add('hidden');
+                ui.nextBtn.classList.add('hidden');
+                return;
+            }
+
+            const candidatePool = filtered.length >= 4 ? filtered : allQuestions;
+
+            const items = questionsToLearn.map(baseQ => {
+                let dir = currentQuizMode;
+                if (dir === 'mix') {
+                    dir = Math.random() < 0.5 ? 'jp-vi' : 'vi-jp';
+                }
+                return createQuizItem(baseQ, dir, candidatePool);
+            });
+
+            reviewQueue = items.sort(() => Math.random() - 0.5);
             
             ui.listScreen.classList.add('hidden');
             ui.quizScreen.classList.remove('hidden');
@@ -2553,6 +2693,7 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
             ui.skipBtn.style.display = "";
             ui.skipBtn.classList.remove('hidden');
             ui.progress.style.display = "";
+            if (ui.directionBadge) ui.directionBadge.style.display = "";
             if (ui.qTypeBadge) ui.qTypeBadge.style.display = "";
             
             loadNextQuestion();
@@ -2665,6 +2806,20 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
                 return;
             }
             
+            // Lắng nghe sự kiện đổi chế độ hỏi
+            document.querySelectorAll('.quiz-mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const mode = btn.getAttribute('data-mode');
+                    if (mode && mode !== currentQuizMode) {
+                        currentQuizMode = mode;
+                        localStorage.setItem(STORAGE_KEY_MODE, currentQuizMode);
+                        updateQuizModeUI();
+                        startQuiz();
+                    }
+                });
+            });
+
+            updateQuizModeUI();
             updateLessonCounts();
             renderPartTabs();
             ui.loadingScreen.classList.add('hidden');
@@ -2677,7 +2832,8 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
                 ui.options.innerHTML = "";
                 ui.skipBtn.style.display = "none";
                 ui.progress.style.display = "none";
-                ui.qTypeBadge.style.display = "none";
+                if (ui.directionBadge) ui.directionBadge.style.display = "none";
+                if (ui.qTypeBadge) ui.qTypeBadge.style.display = "none";
                 return;
             }
 
@@ -2691,8 +2847,19 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
                     : (currentQuestion.part !== 'all' ? ` • Phần ${currentQuestion.part}` : '');
                 lessonBadge.innerText = `Bài ${currentQuestion.lesson}${partInfo}`;
             }
-            updateQuestionDisplay();
-            
+
+            // Direction badge
+            if (ui.directionBadge) {
+                ui.directionBadge.style.display = "";
+                if (currentQuestion.direction === 'vi-jp') {
+                    ui.directionBadge.className = "text-xs font-bold px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full inline-flex items-center gap-1 border border-emerald-300";
+                    ui.directionBadge.innerHTML = "<span>🇻🇳 ➔ 🇯🇵</span><span>Chọn từ tiếng Nhật tương ứng</span>";
+                } else {
+                    ui.directionBadge.className = "text-xs font-bold px-3 py-1 bg-blue-100 text-blue-800 rounded-full inline-flex items-center gap-1 border border-blue-200";
+                    ui.directionBadge.innerHTML = "<span>🇯🇵 ➔ 🇻🇳</span><span>Chọn nghĩa tiếng Việt của từ này</span>";
+                }
+            }
+
             if(currentQuestion.type === 'checkbox') {
                 ui.qTypeBadge.classList.remove('hidden');
                 ui.qTypeBadge.innerText = `CHỌN ${currentQuestion.correct.length} ĐÁP ÁN`;
@@ -2701,21 +2868,29 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
             }
             
             ui.options.innerHTML = "";
+            const hideFurigana = document.getElementById('toggle-furigana')?.checked;
+
             currentQuestion.options.forEach((opt, index) => {
                 const label = document.createElement('label');
                 label.className = "flex items-start p-4 border-2 border-gray-100 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition";
                 const inputType = currentQuestion.type;
                 const inputClass = inputType === 'radio' ? 'rounded-full' : 'rounded';
 
+                const displayOptText = (currentQuestion.direction === 'vi-jp' && hideFurigana)
+                    ? opt.replace(/\s*\([^)]+\)/g, '')
+                    : opt;
+
                 label.innerHTML = `
                     <input type="${inputType}" name="answer" value="${opt.replace(/"/g, '&quot;')}" class="mt-1 mr-4 w-5 h-5 cursor-pointer accent-blue-600 ${inputClass}">
                     <span class="text-gray-700 font-medium">
                         <span class="inline-flex items-center justify-center w-6 h-6 mr-2 text-xs font-bold text-gray-500 bg-gray-200 rounded shadow-sm">${index + 1}</span>
-                        ${opt}
+                        <span class="option-text">${displayOptText}</span>
                     </span>
                 `;
                 ui.options.appendChild(label);
             });
+
+            updateQuestionDisplay();
 
             // Gắn sự kiện tự động kiểm tra đáp án
             document.querySelectorAll('input[name="answer"]').forEach(input => {
@@ -2755,13 +2930,25 @@ Câu 249 [BÀI 7 - PHẦN 3: みんなで楽しいパーティー]
             if (isCorrect) {
                 ui.feedback.className = "mt-6 p-5 rounded-lg bg-green-50 text-green-800 border-2 border-green-200";
                 ui.feedbackTitle.innerText = "✅ Chính xác!";
-                ui.feedbackText.innerHTML = "Tuyệt vời, câu này sẽ không lặp lại nữa.";
+                ui.feedbackText.innerHTML = `
+                    <div class="mt-1 flex items-baseline gap-2 flex-wrap">
+                        <span class="text-xl font-bold text-green-900">${currentQuestion.correctJapanese}</span>
+                        <span class="text-gray-400">•</span>
+                        <span class="text-base font-semibold text-green-800">${currentQuestion.correctVietnamese}</span>
+                    </div>
+                    <p class="text-xs text-green-600 mt-2 font-normal">Tuyệt vời, câu này sẽ không lặp lại nữa.</p>
+                `;
                 reviewQueue.shift(); 
             } else {
                 ui.feedback.className = "mt-6 p-5 rounded-lg bg-red-50 text-red-800 border-2 border-red-200";
-                ui.feedbackTitle.innerText = "❌ Sai rồi! Đáp án đúng phải là:";
-                const correctList = currentQuestion.correct.map(c => `• ${c}`).join('<br>');
-                ui.feedbackText.innerHTML = `<div class="mt-2 text-red-900">${correctList}</div>`;
+                ui.feedbackTitle.innerText = "❌ Sai rồi! Đáp án đúng:";
+                ui.feedbackText.innerHTML = `
+                    <div class="mt-2 p-3 bg-white rounded-lg border border-red-200 shadow-sm">
+                        <div class="text-xl font-bold text-red-900 mb-1">${currentQuestion.correctJapanese}</div>
+                        <div class="text-sm font-semibold text-gray-700">Nghĩa: <span class="text-red-700 font-bold">${currentQuestion.correctVietnamese}</span></div>
+                    </div>
+                    <p class="text-xs text-red-600 mt-2 font-normal">Câu này sẽ lặp lại ở cuối danh sách để bạn luyện tập.</p>
+                `;
                 
                 const failedItem = reviewQueue.shift();
                 reviewQueue.push(failedItem);
