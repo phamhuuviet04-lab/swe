@@ -22,3 +22,31 @@
   - Lọc nhanh theo Bài và từng Phần.
   - Đánh dấu câu đã học, lưu trữ tiến độ qua LocalStorage.
   - Nút định vị nhanh đến câu đã học gần nhất.
+
+## Cấu trúc thư mục dự án
+
+```text
+quizlet/
+├── index.html          # Khung giao diện HTML tinh gọn
+├── css/
+│   └── style.css       # Tùy chỉnh giao diện, thanh cuộn, hiệu ứng
+├── js/
+│   ├── database.js     # Kho dữ liệu từ vựng thô (dễ dàng chỉnh sửa, dán thêm bài mới)
+│   ├── parser.js       # Bộ phân tích dữ liệu câu hỏi và ánh xạ bài học
+│   └── app.js          # Logic điều khiển chính (Quiz, Danh sách, Phím tắt, LocalStorage)
+└── README.md           # Tài liệu hướng dẫn
+```
+
+## Hướng dẫn cập nhật / thêm từ vựng
+- Mở file `js/database.js` và dán hoặc chỉnh sửa các câu hỏi theo mẫu:
+  ```text
+  Câu X [BÀI Y - PHẦN Z: Tiêu đề]
+  Từ_tiếng_Nhật (cách_đọc)
+    A. Nghĩa A
+    B. Nghĩa B  ✓
+    C. Nghĩa C
+    D. Nghĩa D
+  → Đáp án: B
+  ────────────────────────────────────────────────────────────
+  ```
+- Lưu lại và mở trực tiếp [index.html](file:///c:/Users/TUF%20FX506/Downloads/quizlet/index.html) trên bất kỳ trình duyệt nào để học.
